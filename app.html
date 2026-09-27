@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EpoxyMath - honest epoxy math</title>
+<style>
+  :root { --bg:#101418; --card:#182029; --ink:#eaf1f6; --dim:#93a7b6; --acc:#5fb0e0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding:28px 24px 8px; max-width:980px; margin:0 auto; display:flex; justify-content:space-between; align-items:baseline; }
+  h1 { margin:0; font-size:28px; }
+  h1 span { color:var(--acc); }
+  nav a { color:var(--dim); text-decoration:none; font-size:14px; }
+  main { max-width:980px; margin:0 auto; padding:16px 24px 60px; display:grid; gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:20px; }
+  .card h2 { margin:0 0 12px; font-size:13px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:4px; }
+  input, select { width:100%; background:#131a21; border:1px solid #33465a; color:var(--ink); border-radius:8px; padding:9px 10px; font-size:15px; }
+  .hint { font-size:12.5px; color:var(--dim); margin-top:10px; }
+  button { cursor:pointer; border:0; border-radius:9px; padding:11px 16px; font-size:15px; background:var(--acc); color:#0d2436; font-weight:600; }
+  button.ghost { background:#263646; color:var(--ink); font-weight:500; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .verdict { font-size:17px; line-height:1.65; }
+  .verdict b { color:var(--acc); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:16px; }
+  .stat { background:#131a21; border-radius:10px; padding:12px; }
+  .stat .v { font-size:19px; font-weight:700; color:var(--acc); }
+  .stat .k { font-size:12px; color:var(--dim); margin-top:2px; }
+  .warn { background:#33261a; border:1px solid #6e5535; border-radius:10px; padding:12px 14px; margin-top:14px; font-size:14px; color:#f0ddc8; }
+  .ok { background:#1a2e22; border:1px solid #356e4c; border-radius:10px; padding:12px 14px; margin-top:14px; font-size:14px; color:#c8f0da; }
+  table.bd { width:100%; border-collapse:collapse; margin-top:6px; font-size:14.5px; }
+  table.bd td { padding:7px 4px; border-bottom:1px solid #26333f; }
+  table.bd td:last-child { text-align:right; color:var(--acc); font-weight:600; }
+  .fine { font-size:12.5px; color:var(--dim); margin-top:8px; }
+  a { color:var(--acc); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Epoxy<span>Math</span></h1>
+  <nav><a href="index.html">about</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>The pour</h2>
+    <div class="grid">
+      <div>
+        <label for="product">Epoxy</label>
+        <select id="product"></select>
+      </div>
+      <div>
+        <label for="len">Void length (in)</label>
+        <input id="len" type="number" min="1" max="200" step="0.5" value="48">
+      </div>
+      <div>
+        <label for="wid">Void width (in)</label>
+        <input id="wid" type="number" min="1" max="100" step="0.5" value="6">
+      </div>
+      <div>
+        <label for="depth">Depth (in)</label>
+        <input id="depth" type="number" min="0.125" max="12" step="0.125" value="1.5">
+      </div>
+      <div>
+        <label for="waste">Extra for waste (%)</label>
+        <input id="waste" type="number" min="0" max="30" step="1" value="10">
+      </div>
+      <div>
+        <label for="price">Price ($/gal kit)</label>
+        <input id="price" type="number" min="0" max="500" step="5" value="150">
+      </div>
+    </div>
+    <div class="row" id="presets"></div>
+    <div class="hint">Measure the VOID, not the table: for a river table that is river width x table length x slab depth. Odd shapes: pour rice or water in, measure that, and enter the dimensions that match the volume.</div>
+  </section>
+
+  <section class="card">
+    <h2>Your mix</h2>
+    <div class="verdict" id="verdict"></div>
+    <div class="stats" id="stats"></div>
+    <div id="depthBox"></div>
+  </section>
+
+  <section class="card">
+    <h2>Flood coat the top</h2>
+    <div class="grid">
+      <div>
+        <label for="topL">Table length (in)</label>
+        <input id="topL" type="number" min="0" max="200" step="0.5" value="48">
+      </div>
+      <div>
+        <label for="topW">Table width (in)</label>
+        <input id="topW" type="number" min="0" max="100" step="0.5" value="24">
+      </div>
+    </div>
+    <div class="stats" id="floodStats"></div>
+    <div class="fine">A 1/16-inch flood coat over the whole top, in topcoat epoxy - never deep-pour resin for this, it stays rubbery in thin films.</div>
+  </section>
+
+  <section class="card">
+    <h2>The honest part</h2>
+    <div class="verdict" style="font-size:15px">
+      Mix ratios are by VOLUME unless the jug says weight - and if you mix a 2:1 resin at 2:1 by weight, you get a permanent sticky mess, because resin and hardener have different densities. Pour deeper than the product's rated layer and the exotherm does the rest: smoking, cracking, sometimes fire. Depth limits are chemistry, not marketing.
+    </div>
+  </section>
+</main>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var pSel = document.getElementById('product');
+  Object.keys(EpoxyEngine.PRODUCTS).forEach(function (k) {
+    var o = document.createElement('option');
+    o.value = k; o.textContent = EpoxyEngine.PRODUCTS[k].name;
+    pSel.appendChild(o);
+  });
+  var PRESETS = [
+    ['River table 48 x 24', 'deep', 48, 6, 1.5, 48, 24],
+    ['Charcuterie board', 'thick', 18, 2, 0.75, 18, 10],
+    ['Coaster mold set', 'thick', 12, 8, 0.5, 0, 0],
+    ['Countertop flood only', 'topcoat', 1, 1, 0.125, 72, 25]
+  ];
+  var pw = document.getElementById('presets');
+  PRESETS.forEach(function (p) {
+    var b = document.createElement('button');
+    b.className = 'ghost'; b.textContent = p[0];
+    b.addEventListener('click', function () {
+      pSel.value = p[1];
+      document.getElementById('len').value = p[2];
+      document.getElementById('wid').value = p[3];
+      document.getElementById('depth').value = p[4];
+      document.getElementById('topL').value = p[5];
+      document.getElementById('topW').value = p[6];
+      render();
+    });
+    pw.appendChild(b);
+  });
+  function stat(v, k) { return '<div class="stat"><div class="v">' + v + '</div><div class="k">' + k + '</div></div>'; }
+  function num(id) { return Number(document.getElementById(id).value) || 0; }
+  function render() {
+    var pk = pSel.value;
+    var p = EpoxyEngine.PRODUCTS[pk];
+    var L = num('len'), W = num('wid'), D = num('depth');
+    if (L <= 0 || W <= 0 || D <= 0) return;
+    var raw = EpoxyEngine.floz(EpoxyEngine.voidIn3(L, W, D));
+    var total = EpoxyEngine.withWaste(raw, num('waste'));
+    var mix = EpoxyEngine.mixSplit(total, pk);
+    var nLayers = EpoxyEngine.layers(D, pk);
+    var fits = EpoxyEngine.fitsProduct(D, pk);
+    var cost = EpoxyEngine.costDollars(total, num('price'));
+    var kit = EpoxyEngine.kitGallons(total);
+    document.getElementById('verdict').innerHTML =
+      'The void takes <b>' + EpoxyEngine.r2(raw) + ' fl oz</b>; with ' + num('waste') + '% extra, mix <b>' + EpoxyEngine.r2(total) + ' fl oz</b>: ' +
+      '<b>' + mix.resin + ' fl oz resin</b> + <b>' + mix.hardener + ' fl oz hardener</b> (' + p.resinParts + ':' + p.hardParts + ' by volume). ' +
+      'That is about <b>' + kit + ' gallons</b> of kit, roughly <b>$' + cost.toFixed(2) + '</b>.';
+    document.getElementById('stats').innerHTML =
+      stat(EpoxyEngine.r2(raw) + ' fl oz', 'void volume') +
+      stat(mix.resin + ' fl oz', 'resin') +
+      stat(mix.hardener + ' fl oz', 'hardener') +
+      stat('$' + cost.toFixed(2), 'est. cost');
+    var box = document.getElementById('depthBox');
+    if (fits) {
+      box.innerHTML = '<div class="ok">Depth check: ' + D + ' in is inside this product\'s ' + p.maxLayerIn + ' in layer limit (' + p.note + '). One pour, one cure.</div>';
+    } else {
+      box.innerHTML = '<div class="warn">Depth check: ' + D + ' in exceeds the ' + p.maxLayerIn + ' in layer limit for ' + p.name.toLowerCase() + '. Pour in <b>' + nLayers + ' layers</b>, letting each gel before the next - or switch to a deeper-rated resin. A single too-deep pour can exotherm hard enough to crack the piece.</div>';
+    }
+    var tL = num('topL'), tW = num('topW');
+    var fStats = document.getElementById('floodStats');
+    if (tL > 0 && tW > 0) {
+      var fc = EpoxyEngine.floodCoatFloz(tL, tW);
+      var fMix = EpoxyEngine.mixSplit(EpoxyEngine.withWaste(fc, num('waste')), 'topcoat');
+      fStats.innerHTML =
+        stat(EpoxyEngine.r2(fc) + ' fl oz', 'flood coat volume') +
+        stat(fMix.resin + ' fl oz', 'topcoat resin') +
+        stat(fMix.hardener + ' fl oz', 'topcoat hardener');
+    } else {
+      fStats.innerHTML = '';
+    }
+  }
+  ['product', 'len', 'wid', 'depth', 'waste', 'price', 'topL', 'topW'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', render);
+    document.getElementById(id).addEventListener('change', render);
+  });
+  render();
+})();
+</script>
+</body>
+</html>
